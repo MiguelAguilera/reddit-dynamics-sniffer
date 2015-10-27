@@ -24,7 +24,7 @@ REP=10
 while(cond):
 	try:
 	
-		r = praw.Reddit('Monitor Podemos Aragón 1.0')
+		r = praw.Reddit('Reddit montior')
 		keys_file='rd.keys'
 		with open(keys_file) as f:
 			username = f.readline().strip("\n")
