@@ -1,0 +1,76 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+from sys import argv
+import praw
+import json
+import os
+import time
+
+if len(argv) < 2:
+	print "Usage: " + argv[0] + " <subreddit>"
+	exit(1)
+
+subreddit = argv[1].lower()
+
+
+bufferfile='buffer-'+str(subreddit)+'.json'
+threadsfile='threads-'+str(subreddit)+'.csv'
+
+
+cond=True
+rep=0
+REP=10
+while(cond):
+	try:
+	
+		r = praw.Reddit('Monitor Podemos Aragón 1.0')
+		keys_file='rd.keys'
+		with open(keys_file) as f:
+			username = f.readline().strip("\n")
+			password = f.readline().strip("\n")
+		
+		r.login(username = username, password = password)
+		print 'Extracting subreddit'+subreddit+'...'
+		sub=r.get_subreddit(subreddit).get_hot(limit=1000)
+		print 'Done'
+
+		posts={}
+		for post in sub:
+			pid=post.id
+			score = post.score
+			posts[pid]=score
+
+		if os.path.isfile(bufferfile):
+			with open(bufferfile) as infile:
+				postsBF = json.load(infile)
+
+			changing_posts={}
+			for key in posts.keys():
+				if key in postsBF.keys():
+					if posts[key]!=postsBF[key]:
+						changing_posts[key]=posts[key]
+				else:
+					changing_posts[key]=posts[key]
+		else:
+			changing_posts=posts
+		
+		with open(threadsfile, 'a') as outfile:
+			changing_posts['timestamp']=time.time()
+			outfile.write(json.dumps(changing_posts)+'\n')
+			print str(len(changing_posts)-1)+' posts extracted'
+
+		with open(bufferfile,'w') as outfile:
+			json.dump(posts,outfile)
+			
+		cond=False
+		
+	except as e:
+		
+		rep+=1
+		print 'Error '+str(rep)+'. Sleeping...'
+		print e
+		if rep>5:
+			print 'Too many errors. Exit'
+			exit(1)
+		time.sleep(30)
